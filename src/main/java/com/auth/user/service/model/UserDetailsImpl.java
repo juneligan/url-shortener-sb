@@ -32,6 +32,19 @@ public class UserDetailsImpl implements UserDetails {
         return authorities;
     }
 
+    // for otp, if user is
+    public static UserDetails build(User user, String password) {
+        GrantedAuthority authority = new SimpleGrantedAuthority(user.getRole());
+        return new UserDetailsImpl(
+                user.getId(),
+                user.getUsername(),
+                user.getPhoneNumber(),
+                user.getEmail(),
+                password,
+                Collections.singletonList(authority)
+        );
+    }
+
     public static UserDetails build(User user) {
         GrantedAuthority authority = new SimpleGrantedAuthority(user.getRole());
         return new UserDetailsImpl(

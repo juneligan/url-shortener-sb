@@ -5,11 +5,12 @@ plugins {
 }
 
 group = 'com.url'
-version = '0.0.1-SNAPSHOT'
+version = '1.0.0-SNAPSHOT'
 
 java {
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(23)
+		// updated to 21 from 23 bc of termux openjdk limitation
+		languageVersion = JavaLanguageVersion.of(21)
 	}
 }
 
@@ -31,7 +32,8 @@ dependencies {
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 	compileOnly 'org.projectlombok:lombok'
-//	runtimeOnly 'org.postgresql:postgresql'
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
+//	runtimeOnly 'org.postgresql:postgresql' // can't use postgres due to termux limitation
 	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
