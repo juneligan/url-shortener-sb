@@ -46,7 +46,7 @@ public class WebSecurityConfig {
                                 .requestMatchers("/api/urls/**").authenticated()
                                 .requestMatchers("/api/users/**").authenticated()
                                 .requestMatchers("/{shortUrl}").permitAll()
-                                .requestMatchers("/ws/**").permitAll()
+                                .requestMatchers("/websocket/**").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .userDetailsService(userDetailsService);

@@ -1,16 +1,24 @@
 package com.auth.user.exception;
 
+import com.auth.user.service.model.SbResponse;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Data
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@Builder
 @AllArgsConstructor
-public class ErrorResponse {
+@NoArgsConstructor
+@Data
+public class ErrorResponse implements SbResponse {
     private LocalDateTime timestamp;
-    private int status;
+    private Integer status;
+    private String errorCode;
     private String error;
     private String message;
     private String path;

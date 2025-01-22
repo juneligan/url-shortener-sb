@@ -1,10 +1,12 @@
 package com.auth.user.controller;
 
+import com.auth.user.exception.ErrorResponse;
 import com.auth.user.service.OtpService;
 import com.auth.user.service.UserService;
 import com.auth.user.service.model.LoginRequest;
 import com.auth.user.service.model.OtpRequest;
 import com.auth.user.service.model.RegisterRequest;
+import com.auth.user.service.model.SbResponse;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -42,6 +44,10 @@ public class AuthController {
     // this will authenticate user with OTP
     @PostMapping("/public/otp/authenticate")
     public ResponseEntity<?> authenticateOtp(@RequestBody OtpRequest otpRequest) {
-        return ResponseEntity.ok(userService.authenticateUser(otpRequest));
+        SbResponse result = userService.authenticateUser(otpRequest);
+        if (result instanceof ErrorResponse) {
+            return ResponseEntity.badRequest().body(result);
+        }
+        return ResponseEntity.ok(result);
     }
 }

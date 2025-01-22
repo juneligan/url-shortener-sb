@@ -2,11 +2,13 @@ package com.auth.user.service;
 
 import com.auth.user.entity.Otp;
 import com.auth.user.entity.User;
+import com.auth.user.exception.ErrorResponse;
 import com.auth.user.repository.OtpRepository;
 import com.auth.user.repository.UserRepository;
 import com.auth.user.security.JwtAuthenticationResponse;
 import com.auth.user.security.JwtUtils;
 import com.auth.user.service.model.OtpRequest;
+import com.auth.user.service.model.SbResponse;
 import com.auth.user.service.model.UserDetailsImpl;
 import com.auth.user.service.model.LoginRequest;
 import com.auth.user.service.model.RegisterRequest;
@@ -19,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @AllArgsConstructor
 @Service
@@ -58,21 +61,24 @@ public class UserService {
         return new JwtAuthenticationResponse(jwt);
     }
 
-    public JwtAuthenticationResponse authenticateUser(OtpRequest otpRequest) {
-        Otp otp = otpRepository.findByOtpAndExpiryTimeAfterAndUser_PhoneNumber(
+    public SbResponse authenticateUser(OtpRequest otpRequest) {
+        Optional<Otp> otp = otpRepository.findByOtpAndExpiryTimeAfterAndUser_PhoneNumber(
                 otpRequest.getOtp(),
                 LocalDateTime.now(),
                 otpRequest.getPhoneNumber()
-        )
-                // invalid if otp is not linked to the phone number
-                // invalid if the otp is expired
-                // invalid if the otp is not found
-                .orElseThrow(() -> new IllegalArgumentException("Invalid OTP!"));
+        );
+
+        // invalid if otp is not linked to the phone number
+        // invalid if the otp is expired
+        // invalid if the otp is not found
+        if (otp.isEmpty()) {
+            return ErrorResponse.builder().error("Invalid OTP! not found or expired").build();
+        }
 
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         otpRequest.getPhoneNumber(),
-                        otp.getOtp()
+                        otp.get().getOtp()
                 )
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);

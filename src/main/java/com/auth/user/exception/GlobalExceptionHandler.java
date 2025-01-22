@@ -24,7 +24,8 @@ public class GlobalExceptionHandler {
 
         ErrorResponse errorResponse = new ErrorResponse(
                 LocalDateTime.now(),
-                HttpStatus.BAD_REQUEST.value(),
+                400,
+                "400",
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
                 "Validation failed",
                 request.getDescription(false),

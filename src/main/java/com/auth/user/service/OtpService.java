@@ -4,6 +4,7 @@ import com.auth.user.entity.Otp;
 import com.auth.user.entity.User;
 import com.auth.user.repository.OtpRepository;
 import com.auth.user.service.model.LoginRequest;
+import com.auth.user.service.model.OtpNotifMessage;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -41,8 +42,14 @@ public class OtpService {
                     Otp otpEntity = Otp.builder().otp(otp).user(user).build();
                     otpRepository.save(otpEntity);
 
-                    log.info("Sending OTP for user: {}", user.getPhoneNumber());
-                    simpMessagingTemplate.convertAndSend("/otp", otpEntity);
+                    OtpNotifMessage otpMessage = OtpNotifMessage.builder()
+                            .otp(otp)
+                            .phoneNumber(user.getPhoneNumber())
+                            .build();
+
+                    log.info("Sending OTP {} for user: {}", otpMessage, user.getPhoneNumber());
+                    simpMessagingTemplate.convertAndSend("/otp", otpMessage);
+
                     return "OTP sent successfully!";
                 });
     }
