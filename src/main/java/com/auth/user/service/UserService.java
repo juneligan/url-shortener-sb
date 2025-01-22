@@ -41,8 +41,10 @@ public class UserService {
         user.setPhoneNumber(registerRequest.getPhoneNumber());
         user.setEmail(registerRequest.getEmail());
         user.setUsername(registerRequest.getUsername());
-        user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
         user.setRole("ROLE_USER"); // static for now
+        if (registerRequest.getPassword() != null) { // password is optional for otp typed users
+            user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
+        }
 
         return userRepository.save(user);
     }
