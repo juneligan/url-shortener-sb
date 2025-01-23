@@ -10,6 +10,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -19,6 +20,7 @@ import java.time.LocalDateTime;
 public class UserDetailsServiceImpl implements UserDetailsService {
     private final UserRepository userRepository;
     private final OtpRepository otpRepository;
+    private final PasswordEncoder passwordEncoder;
 
     /** Concrete class of UserDetailsService from Spring Security
      * This method loads a user by their phone number instead of username
@@ -31,10 +33,11 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         new UsernameNotFoundException("User Not Found with phone number: " + phoneNumber)
                 );
 
-        if (user.getPassword() == null) {
+        if (user.getPassword() == null || user.getPassword().isEmpty()) {
             Otp otp = otpRepository.findTop1ByUserAndExpiryTimeIsAfter(user, LocalDateTime.now())
                     .orElseThrow(() -> new RuntimeException("No OTP found for user: " + phoneNumber));
-            return UserDetailsImpl.build(user, otp.getOtp());
+            // encode otp as password for authentication
+            return UserDetailsImpl.build(user, passwordEncoder.encode(otp.getOtp()));
         }
 
         return UserDetailsImpl.build(user);

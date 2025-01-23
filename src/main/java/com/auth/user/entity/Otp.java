@@ -41,6 +41,4 @@ public class Otp {
     private Boolean verified = false;
     @Builder.Default
     private LocalDateTime expiryTime = LocalDateTime.now().plusMinutes(2);
-    @Builder.Default
-    private Boolean active = true;
 }
