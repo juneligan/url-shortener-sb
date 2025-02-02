@@ -38,7 +38,9 @@ public class Otp {
     private User user;
 
     @Builder.Default
+    @Column(nullable = false)
     private Boolean verified = false;
     @Builder.Default
+    @Column(nullable = false)
     private LocalDateTime expiryTime = LocalDateTime.now().plusMinutes(2);
 }

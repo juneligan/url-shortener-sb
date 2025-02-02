@@ -21,7 +21,10 @@ public class User {
     private String username;
     private String password;
     private String role = "ROLE_USER";
+    @Column(nullable = false)
     private Boolean phoneNumberVerified = false;
+    @Column(nullable = false)
     private Boolean emailVerified = false;
+    @Column(nullable = false)
     private Boolean active = true;
 }

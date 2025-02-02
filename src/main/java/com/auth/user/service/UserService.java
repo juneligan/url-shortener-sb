@@ -50,21 +50,11 @@ public class UserService {
     }
 
     public JwtAuthenticationResponse authenticateUser(LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        loginRequest.getPhoneNumber(),
-                        loginRequest.getPassword()
-                )
-        );
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        String jwt = jwtUtils.generateToken(userDetails);
-        return new JwtAuthenticationResponse(jwt);
+        return getJwtAuthenticationResponse(loginRequest.getPhoneNumber(), loginRequest.getPassword());
     }
 
     public SbResponse authenticateUser(OtpRequest otpRequest) {
-        Optional<Otp> otp = otpRepository.findByOtpAndExpiryTimeAfterAndUser_PhoneNumber(
+        Optional<Otp> otp = otpRepository.findTop1ByOtpAndExpiryTimeAfterAndUserPhoneNumberAndUserPasswordIsNullAndUserActiveIsTrue(
                 otpRequest.getOtp(),
                 LocalDateTime.now(),
                 otpRequest.getPhoneNumber()
@@ -77,17 +67,7 @@ public class UserService {
             return ErrorResponse.builder().error("Invalid OTP! not found or expired").build();
         }
 
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        otpRequest.getPhoneNumber(),
-                        otp.get().getOtp()
-                )
-        );
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        String jwt = jwtUtils.generateToken(userDetails);
-        return new JwtAuthenticationResponse(jwt);
+        return getJwtAuthenticationResponse(otpRequest.getPhoneNumber(), otp.get().getOtp());
     }
 
     // this will be used for OTP login since the user will not go through registration process
@@ -102,5 +82,16 @@ public class UserService {
     public User findByPhoneNumber(String phoneNumber) {
         return userRepository.findByPhoneNumber(phoneNumber)
                 .orElseThrow(() -> new IllegalArgumentException("User Not Found with phone number: " + phoneNumber));
+    }
+
+    private JwtAuthenticationResponse getJwtAuthenticationResponse(String username, String password) {
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(username, password)
+        );
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        String jwt = jwtUtils.generateToken(userDetails);
+        return new JwtAuthenticationResponse(jwt);
     }
 }
