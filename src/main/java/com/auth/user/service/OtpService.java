@@ -31,6 +31,7 @@ public class OtpService {
      * @param loginRequest the login request containing the phone number.
      **/
     public String sendOtp(LoginRequest loginRequest) {
+        log.info("Received request to send OTP for user: {}", loginRequest.getPhoneNumber());
         User user = userService.findByPhoneNumberOrRegisterUser(loginRequest.getPhoneNumber());
 
         // find active otp given user id, return string for the response
