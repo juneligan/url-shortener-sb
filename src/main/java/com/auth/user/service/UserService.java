@@ -54,7 +54,7 @@ public class UserService {
     }
 
     public SbResponse authenticateUser(OtpRequest otpRequest) {
-        Optional<Otp> otp = otpRepository.findTop1ByOtpAndExpiryTimeAfterAndUserPhoneNumberAndUserPasswordIsNullAndUserActiveIsTrue(
+        Optional<Otp> otp = otpRepository.findTop1ByOtpAndExpiryTimeAfterAndVerifiedIsFalseAndUserPhoneNumberAndUserPasswordIsNullAndUserActiveIsTrue(
                 otpRequest.getOtp(),
                 LocalDateTime.now(),
                 otpRequest.getPhoneNumber()
@@ -67,7 +67,15 @@ public class UserService {
             return ErrorResponse.builder().error("Invalid OTP! not found or expired").build();
         }
 
-        return getJwtAuthenticationResponse(otpRequest.getPhoneNumber(), otp.get().getOtp());
+        Otp otpEntity = otp.get();
+        updatePhoneNumberVerification(otpEntity);
+        JwtAuthenticationResponse jwtAuthenticationResponse = getJwtAuthenticationResponse(
+                otpRequest.getPhoneNumber(), otpEntity.getOtp()
+        );
+
+        otpEntity.setVerified(true);
+        otpRepository.save(otpEntity);
+        return jwtAuthenticationResponse;
     }
 
     // this will be used for OTP login since the user will not go through registration process
@@ -93,5 +101,13 @@ public class UserService {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         String jwt = jwtUtils.generateToken(userDetails);
         return new JwtAuthenticationResponse(jwt);
+    }
+
+    private void updatePhoneNumberVerification(Otp otpEntity) {
+        User user = otpEntity.getUser();
+        if (!user.getPhoneNumberVerified()) {
+            user.setPhoneNumberVerified(true);
+            userRepository.save(user);
+        }
     }
 }
