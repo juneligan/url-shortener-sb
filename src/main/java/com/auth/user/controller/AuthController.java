@@ -7,6 +7,7 @@ import com.auth.user.service.model.LoginRequest;
 import com.auth.user.service.model.OtpRequest;
 import com.auth.user.service.model.RegisterRequest;
 import com.auth.user.service.model.SbResponse;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -29,14 +30,14 @@ public class AuthController {
     }
 
     @PostMapping("/public/register")
-    public ResponseEntity<?> registerUser(@RequestBody RegisterRequest registerRequest) {
+    public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest registerRequest) {
         userService.registerUser(registerRequest);
         return ResponseEntity.ok("User registered successfully!");
     }
 
     // this will register user if not exists or login and send OTP
     @PostMapping("/public/otp/login") // use for guest type users
-    public ResponseEntity<?> loginRegistrationUserForOtp(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<?> loginRegistrationUserForOtp(@Valid @RequestBody LoginRequest loginRequest) {
         log.info("Received request to send OTP");
         return ResponseEntity.ok(otpService.sendOtp(loginRequest));
     }

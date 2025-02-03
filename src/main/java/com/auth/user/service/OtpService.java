@@ -35,7 +35,7 @@ public class OtpService {
         User user = userService.findByPhoneNumberOrRegisterUser(loginRequest.getPhoneNumber());
 
         // find active otp given user id, return string for the response
-        return otpRepository.findTop1ByUserAndExpiryTimeIsAfter(user, LocalDateTime.now())
+        return otpRepository.findTop1ByUserAndUserActiveTrueAndExpiryTimeIsAfter(user, LocalDateTime.now())
                 .map(otp -> "Otp already sent! wait for 2 minute to generate new OTP")
                 .orElseGet(() -> {
                     log.info("Generating OTP for user: {}", user.getPhoneNumber());
@@ -53,5 +53,10 @@ public class OtpService {
 
                     return "OTP sent successfully!";
                 });
+    }
+
+    public Otp findOtpByPhoneNumber(User user) {
+        return  otpRepository.findTop1ByUserAndUserActiveTrueAndExpiryTimeIsAfter(user, LocalDateTime.now())
+                .orElseThrow(() -> new RuntimeException("No OTP found for user: " + user.getPhoneNumber()));
     }
 }

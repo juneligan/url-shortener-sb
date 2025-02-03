@@ -32,14 +32,23 @@ dependencies {
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 	compileOnly 'org.projectlombok:lombok'
+	// currently used as android app notifier to send OTP using the real phone and its sms load
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
 //	runtimeOnly 'org.postgresql:postgresql' // can't use postgres due to termux limitation
-	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
+	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client' // using mariadb instead of postgres
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	// for the annotation validation i.e. PhoneNumberValidator
+	testImplementation 'org.hibernate.validator:hibernate-validator'
+
+	// this removes the WARNING logs of Mockito is currently self-attaching issue
+	testImplementation 'net.bytebuddy:byte-buddy-agent:1.12.20'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {
+	// this removes the WARNING logs of Mockito is currently self-attaching issue
+	jvmArgs += "-javaagent:${configurations.testRuntimeClasspath.find { it.name.contains('byte-buddy-agent') }}"
 	useJUnitPlatform()
 }

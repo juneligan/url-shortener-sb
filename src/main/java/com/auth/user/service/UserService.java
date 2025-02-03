@@ -26,6 +26,9 @@ import java.util.Optional;
 @AllArgsConstructor
 @Service
 public class UserService {
+    private static final String REGEX_SANITIZE_PH_CODE = "^\\+?63";
+    private static final String PH_NUM_PREFIX = "0";
+    public static final String DEFAULT_ROLE_USER = "ROLE_USER";
     private PasswordEncoder passwordEncoder;
     private UserRepository userRepository;
     private AuthenticationManager authenticationManager;
@@ -33,15 +36,16 @@ public class UserService {
     private OtpRepository otpRepository;
 
     public User registerUser(RegisterRequest registerRequest) {
-        userRepository.findByPhoneNumber(registerRequest.getPhoneNumber())
+        String sanitizedPhoneNumber = getSanitizedPhoneNumber(registerRequest.getPhoneNumber());
+        userRepository.findByPhoneNumberAndActiveTrue(sanitizedPhoneNumber)
                 .ifPresent(user -> {
                     throw new IllegalArgumentException("Phone number already in use!");
                 });
         User user = new User();
-        user.setPhoneNumber(registerRequest.getPhoneNumber());
+        user.setPhoneNumber(sanitizedPhoneNumber);
         user.setEmail(registerRequest.getEmail());
         user.setUsername(registerRequest.getUsername());
-        user.setRole("ROLE_USER"); // static for now
+        user.setRole(DEFAULT_ROLE_USER); // static for now
         if (registerRequest.getPassword() != null) { // password is optional for otp typed users
             user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
         }
@@ -54,10 +58,11 @@ public class UserService {
     }
 
     public SbResponse authenticateUser(OtpRequest otpRequest) {
+        String sanitizedPhoneNumber = getSanitizedPhoneNumber(otpRequest.getPhoneNumber());
         Optional<Otp> otp = otpRepository.findTop1ByOtpAndExpiryTimeAfterAndVerifiedIsFalseAndUserPhoneNumberAndUserPasswordIsNullAndUserActiveIsTrue(
                 otpRequest.getOtp(),
                 LocalDateTime.now(),
-                otpRequest.getPhoneNumber()
+                sanitizedPhoneNumber
         );
 
         // invalid if otp is not linked to the phone number
@@ -80,21 +85,27 @@ public class UserService {
 
     // this will be used for OTP login since the user will not go through registration process
     public User findByPhoneNumberOrRegisterUser(String phoneNumber) {
-        return userRepository.findByPhoneNumber(phoneNumber)
+        // sanitize phone number to remove country code
+        String sanitizedPhoneNumber = getSanitizedPhoneNumber(phoneNumber);
+        return userRepository.findByPhoneNumberAndActiveTrue(sanitizedPhoneNumber)
                 .orElseGet(() -> {
-                    RegisterRequest registerRequest = RegisterRequest.builder().phoneNumber(phoneNumber).build();
+                    RegisterRequest registerRequest = RegisterRequest.builder()
+                            .phoneNumber(sanitizedPhoneNumber)
+                            .build();
                     return registerUser(registerRequest);
                 });
     }
 
     public User findByPhoneNumber(String phoneNumber) {
-        return userRepository.findByPhoneNumber(phoneNumber)
+        String sanitizedPhoneNumber = getSanitizedPhoneNumber(phoneNumber);
+        return userRepository.findByPhoneNumberAndActiveTrue(sanitizedPhoneNumber)
                 .orElseThrow(() -> new IllegalArgumentException("User Not Found with phone number: " + phoneNumber));
     }
 
     private JwtAuthenticationResponse getJwtAuthenticationResponse(String username, String password) {
+        String sanitizedPhoneNumber = getSanitizedPhoneNumber(username);
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(username, password)
+                new UsernamePasswordAuthenticationToken(sanitizedPhoneNumber, password)
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
@@ -109,5 +120,9 @@ public class UserService {
             user.setPhoneNumberVerified(true);
             userRepository.save(user);
         }
+    }
+
+    public static String getSanitizedPhoneNumber(String phoneNumber) {
+        return phoneNumber.replaceFirst(REGEX_SANITIZE_PH_CODE, PH_NUM_PREFIX);
     }
 }

@@ -28,15 +28,20 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Transactional
     @Override
     public UserDetails loadUserByUsername(String phoneNumber) throws UsernameNotFoundException {
-        User user = userRepository.findByPhoneNumber(phoneNumber)
+        // can't use userService because of circular dependency issue
+        // i.e. webSecurityConfig > userService > userDetailsServiceImpl > webSecurityConfig
+        String sanitizedPhoneNumber = UserService.getSanitizedPhoneNumber(phoneNumber);
+        User user = userRepository.findByPhoneNumberAndActiveTrue(sanitizedPhoneNumber)
                 .orElseThrow(() ->
-                        new UsernameNotFoundException("User Not Found with phone number: " + phoneNumber)
+                        new UsernameNotFoundException("User Not Found with phone number: " + sanitizedPhoneNumber)
                 );
 
         if (user.getPassword() == null || user.getPassword().isEmpty()) {
-            Otp otp = otpRepository.findTop1ByUserAndExpiryTimeIsAfter(user, LocalDateTime.now())
-                    .orElseThrow(() -> new RuntimeException("No OTP found for user: " + phoneNumber));
-            // encode otp as password for authentication
+            // can't use otpService because of circular dependency issue
+            // i.e. webSecurityConfig  > otpService > userService > userDetailsServiceImpl > webSecurityConfig
+            Otp otp = otpRepository.findTop1ByUserAndUserActiveTrueAndExpiryTimeIsAfter(user, LocalDateTime.now())
+                    .orElseThrow(() -> new RuntimeException("No OTP found for user: " + sanitizedPhoneNumber));
+            // encode otp as temporary password for authentication
             return UserDetailsImpl.build(user, passwordEncoder.encode(otp.getOtp()));
         }
 
