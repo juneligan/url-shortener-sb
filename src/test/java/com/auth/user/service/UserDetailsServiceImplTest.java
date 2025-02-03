@@ -9,7 +9,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,9 +16,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,60 +40,73 @@ public class UserDetailsServiceImplTest {
     }
 
     @Test
-    public void testLoadUserByUsername_UserFoundWithPassword() {
+    public void whenLoadUserByUsername_UserFoundWithPassword() {
+        // given
         User user = new User();
         user.setPhoneNumber("09123456789");
         user.setPassword("password");
 
-        when(userRepository.findByPhoneNumberAndActiveTrue(anyString())).thenReturn(Optional.of(user));
+        // when
+        when(userRepository.findByPhoneNumberAndActiveTrue("09123456789")).thenReturn(Optional.of(user));
 
+        // then
         UserDetailsImpl userDetails = (UserDetailsImpl) userDetailsService.loadUserByUsername("09123456789");
 
         assertNotNull(userDetails);
-        assertEquals("09123456789", userDetails.getUsername());
+        assertEquals("09123456789", userDetails.getPhoneNumber());
     }
 
     @Test
-    public void testLoadUserByUsername_UserNotFound() {
-        when(userRepository.findByPhoneNumberAndActiveTrue(anyString())).thenReturn(Optional.empty());
+    public void whenLoadUserByUsername_UserNotFound() {
+        // given
+        String phoneNumber = "09123456789";
 
-        assertThrows(UsernameNotFoundException.class, () -> {
-            userDetailsService.loadUserByUsername("09123456789");
-        });
+        // when
+        when(userRepository.findByPhoneNumberAndActiveTrue(phoneNumber)).thenReturn(Optional.empty());
+
+        // then
+        assertThrows(
+                UsernameNotFoundException.class, () -> userDetailsService.loadUserByUsername(phoneNumber)
+        );
     }
 
     @Test
-    public void testLoadUserByUsername_UserFoundWithoutPassword() {
+    public void whenLoadUserByUsername_UserFoundWithoutPassword() {
+        // given
         User user = new User();
         user.setPhoneNumber("09123456789");
 
         Otp otp = new Otp();
         otp.setOtp("123456");
-        otp.setExpiryTime(LocalDateTime.now().plusMinutes(5));
+        LocalDateTime now = LocalDateTime.now();
+        otp.setExpiryTime(now.plusMinutes(5));
 
-        when(userRepository.findByPhoneNumberAndActiveTrue(anyString())).thenReturn(Optional.of(user));
-        when(otpRepository.findTop1ByUserAndUserActiveTrueAndExpiryTimeIsAfter(any(User.class), any(LocalDateTime.class)))
+        // when
+        when(userRepository.findByPhoneNumberAndActiveTrue("09123456789")).thenReturn(Optional.of(user));
+        when(otpRepository.findTop1ByUserAndUserActiveTrueAndExpiryTimeIsAfter(eq(user), any(LocalDateTime.class)))
                 .thenReturn(Optional.of(otp));
-        when(passwordEncoder.encode(anyString())).thenReturn("encodedOtp");
+        when(passwordEncoder.encode("123456")).thenReturn("encodedOtp");
 
+        // then
         UserDetailsImpl userDetails = (UserDetailsImpl) userDetailsService.loadUserByUsername("09123456789");
 
         assertNotNull(userDetails);
-        assertEquals("09123456789", userDetails.getUsername());
+        assertEquals("09123456789", userDetails.getPhoneNumber());
         assertEquals("encodedOtp", userDetails.getPassword());
     }
 
     @Test
-    public void testLoadUserByUsername_UserFoundWithoutPasswordAndOtpNotFound() {
+    public void whenLoadUserByUsername_UserFoundWithoutPasswordAndOtpNotFound() {
+        // given
         User user = new User();
         user.setPhoneNumber("09123456789");
 
-        when(userRepository.findByPhoneNumberAndActiveTrue(anyString())).thenReturn(Optional.of(user));
-        when(otpRepository.findTop1ByUserAndUserActiveTrueAndExpiryTimeIsAfter(any(User.class), any(LocalDateTime.class)))
+        // when
+        when(userRepository.findByPhoneNumberAndActiveTrue("09123456789")).thenReturn(Optional.of(user));
+        when(otpRepository.findTop1ByUserAndUserActiveTrueAndExpiryTimeIsAfter(user, LocalDateTime.now()))
                 .thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> {
-            userDetailsService.loadUserByUsername("09123456789");
-        });
+        // then
+        assertThrows(RuntimeException.class, () -> userDetailsService.loadUserByUsername("09123456789"));
     }
 }
