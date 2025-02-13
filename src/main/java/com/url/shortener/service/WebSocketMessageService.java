@@ -12,16 +12,16 @@ import java.util.concurrent.TimeUnit;
 
 
 //@Service
-@RequiredArgsConstructor
+//@RequiredArgsConstructor
 public class WebSocketMessageService { // Test class to send websocket message to client
 
-    private final SimpMessagingTemplate simpMessagingTemplate;
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+//    private final SimpMessagingTemplate simpMessagingTemplate;
+//    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
 //    @PostConstruct
-    public void startSendingMessages() {
-        scheduler.scheduleAtFixedRate(this::sendMessage, 0, 5, TimeUnit.SECONDS);
-    }
+//    public void startSendingMessages() {
+//        scheduler.scheduleAtFixedRate(this::sendMessage, 0, 5, TimeUnit.SECONDS);
+//    }
 
     private void sendMessage() {
         NotificationMessage message = NotificationMessage.builder()
@@ -32,6 +32,6 @@ public class WebSocketMessageService { // Test class to send websocket message t
                 .build();
 
         System.out.println("message = " + message);
-        simpMessagingTemplate.convertAndSend("/notification", message);
+//        simpMessagingTemplate.convertAndSend("/notification", message);
     }
 }
