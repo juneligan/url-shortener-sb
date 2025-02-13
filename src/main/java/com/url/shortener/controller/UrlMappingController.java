@@ -27,6 +27,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
+import static com.auth.user.utils.UserUtils.getPhoneNumberFromPrincipal;
+
 @AllArgsConstructor
 @RestController
 @RequestMapping("/api/urls")
@@ -40,7 +42,8 @@ public class UrlMappingController {
             @RequestBody UrlMappingRequest urlMappingRequest, @NonNull Principal principal
     ) {
         String originalUrl = urlMappingRequest.getOriginalUrl();
-        String phoneNumber = getPhoneNumber(((UsernamePasswordAuthenticationToken) principal).getPrincipal());
+        String phoneNumber = getPhoneNumberFromPrincipal(((UsernamePasswordAuthenticationToken) principal)
+                .getPrincipal());
         User user = userService.findByPhoneNumber(phoneNumber);
         UrlMappingResponse urlMappingResponse = urlMappingService.createShortUrl(originalUrl, user);
 
@@ -50,13 +53,10 @@ public class UrlMappingController {
     @GetMapping
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<?> getAllUrls(@NonNull Principal principal) {
-        String phoneNumber = getPhoneNumber(((UsernamePasswordAuthenticationToken) principal).getPrincipal());
+        String phoneNumber = getPhoneNumberFromPrincipal(((UsernamePasswordAuthenticationToken) principal)
+                .getPrincipal());
         User user = userService.findByPhoneNumber(phoneNumber);
         return ResponseEntity.ok(urlMappingService.getAllUrls(user));
-    }
-
-    private static String getPhoneNumber(@NonNull Object principal) {
-        return ((UserDetailsImpl) principal).getPhoneNumber();
     }
 
     @GetMapping("/analytics/{shortUrl}")
@@ -83,7 +83,8 @@ public class UrlMappingController {
             Principal principal
     ) {
         DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE;
-        String phoneNumber = getPhoneNumber(((UsernamePasswordAuthenticationToken) principal).getPrincipal());
+        String phoneNumber = getPhoneNumberFromPrincipal(((UsernamePasswordAuthenticationToken) principal)
+                .getPrincipal());
         User user = userService.findByPhoneNumber(phoneNumber);
 
         LocalDate startDateTime = startDate != null ? LocalDate.parse(startDate, formatter) : null;
