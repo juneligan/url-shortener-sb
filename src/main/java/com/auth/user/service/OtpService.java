@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
+import static com.url.shortener.config.WebSocketBrokerConfig.TOPIC_OTP;
+
 @Slf4j
 @AllArgsConstructor
 @Service
@@ -49,7 +51,7 @@ public class OtpService {
                             .build();
 
                     log.info("Sending OTP {} for user: {}", otpMessage, user.getPhoneNumber());
-                    simpMessagingTemplate.convertAndSend("/otp", otpMessage);
+                    simpMessagingTemplate.convertAndSend(TOPIC_OTP, otpMessage);
 
                     return "OTP sent successfully!";
                 });

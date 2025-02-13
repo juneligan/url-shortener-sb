@@ -9,10 +9,13 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketBrokerConfig implements WebSocketMessageBrokerConfigurer {
+    public final static String TOPIC_OTP = "/otp";
+    public final static String TOPIC_SMS = "/sms";
+    public final static String TOPIC_NOTIFICATION = "/notification";
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        config.enableSimpleBroker("/notification", "/otp");
+        config.enableSimpleBroker(TOPIC_NOTIFICATION, TOPIC_OTP, TOPIC_SMS);
     }
 
     @Override

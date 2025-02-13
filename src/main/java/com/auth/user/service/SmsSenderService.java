@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
+import static com.url.shortener.config.WebSocketBrokerConfig.TOPIC_SMS;
+
 @Slf4j
 @AllArgsConstructor
 @Service
@@ -31,7 +33,7 @@ public class SmsSenderService {
         User user = userService.findByPhoneNumberOrRegisterUser(username);
 
         log.info("Sending sms to {} for user: {}", smsRequest.getPhoneNumber(), user.getPhoneNumber());
-        simpMessagingTemplate.convertAndSend("/sms", smsRequest);
+        simpMessagingTemplate.convertAndSend(TOPIC_SMS, smsRequest);
 
         return "SMS sent successfully!";
     }
