@@ -23,9 +23,9 @@ public class JwtUtils {
     private static final String BEARER_KEY = "Bearer ";
     private static final String AUTH_HEADER = "Authorization";
     private final String jwtSecret;
-    private final int jwtExpirationMs;
+    private final long jwtExpirationMs;
 
-    public JwtUtils(@Value("${jwt.secret}") String jwtSecret, @Value("${jwt.expiration.ms}") int jwtExpirationMs) {
+    public JwtUtils(@Value("${jwt.secret}") String jwtSecret, @Value("${jwt.expiration.ms}") long jwtExpirationMs) {
         this.jwtSecret = jwtSecret;
         this.jwtExpirationMs = jwtExpirationMs;
     }
