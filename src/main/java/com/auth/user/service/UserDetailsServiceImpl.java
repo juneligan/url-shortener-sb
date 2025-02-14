@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
+import static com.auth.user.utils.UserUtils.getSanitizedPhoneNumber;
+
 @AllArgsConstructor
 @Service
 public class UserDetailsServiceImpl implements UserDetailsService {
@@ -30,7 +32,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     public UserDetails loadUserByUsername(String phoneNumber) throws UsernameNotFoundException {
         // can't use userService because of circular dependency issue
         // i.e. webSecurityConfig > userService > userDetailsServiceImpl > webSecurityConfig
-        String sanitizedPhoneNumber = UserService.getSanitizedPhoneNumber(phoneNumber);
+        String sanitizedPhoneNumber = getSanitizedPhoneNumber(phoneNumber);
         User user = userRepository.findByPhoneNumberAndActiveTrue(sanitizedPhoneNumber)
                 .orElseThrow(() ->
                         new UsernameNotFoundException("User Not Found with phone number: " + sanitizedPhoneNumber)

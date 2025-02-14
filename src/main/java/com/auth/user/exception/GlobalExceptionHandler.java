@@ -29,7 +29,8 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
                 "Validation failed",
                 request.getDescription(false),
-                errorDetails
+                errorDetails,
+                null
         );
 
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);

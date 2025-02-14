@@ -23,4 +23,20 @@ public class ErrorResponse implements SbResponse {
     private String message;
     private String path;
     private List<ErrorDetail> errors;
+    // transient
+    private String username; // for logging purposes
+
+    public static ErrorResponse build(ErrorCode errorCode, Object... args) {
+        return build(errorCode, null, args);
+    }
+
+    public static ErrorResponse build(ErrorCode errorCode, String username, Object... args) {
+        return ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(errorCode.getStatus())
+                .errorCode(errorCode.getCode())
+                .error(errorCode.formatMessage(args))
+                .username(username)
+                .build();
+    }
 }

@@ -33,7 +33,7 @@ public class UrlMappingService {
         urlMapping.setOriginalUrl(originalUrl);
         urlMapping.setShortUrl(shortUrl);
         urlMapping.setUser(user);
-        urlMapping.setCreatedDate(LocalDateTime.now());
+        urlMapping.setCreatedAt(LocalDateTime.now());
 
         UrlMapping savedUrlMapping = urlMappingRepository.save(urlMapping);
         return convertToResponse(savedUrlMapping);
@@ -52,7 +52,7 @@ public class UrlMappingService {
                         .originalUrl(urlMapping.getOriginalUrl())
                         .shortUrl(urlMapping.getShortUrl())
                         .clickCount(urlMapping.getClickCount())
-                        .createdDate(urlMapping.getCreatedDate())
+                        .createdDate(urlMapping.getCreatedAt())
                         .username(urlMapping.getUser().getUsername())
                         .phoneNumber(urlMapping.getUser().getPhoneNumber())
                         .build();

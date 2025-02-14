@@ -3,10 +3,12 @@ package com.auth.user.controller;
 import com.auth.user.exception.ErrorResponse;
 import com.auth.user.service.OtpService;
 import com.auth.user.service.UserService;
+import com.auth.user.service.model.GenericResponse;
 import com.auth.user.service.model.LoginRequest;
 import com.auth.user.service.model.OtpRequest;
 import com.auth.user.service.model.RegisterRequest;
 import com.auth.user.service.model.SbResponse;
+import com.auth.user.service.model.UserResponse;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +33,10 @@ public class AuthController {
 
     @PostMapping("/public/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest registerRequest) {
-        userService.registerUser(registerRequest);
+        GenericResponse<UserResponse> response = userService.registerUser(registerRequest);
+        if (response.hasError()) {
+            return ResponseEntity.badRequest().body(response.getError());
+        }
         return ResponseEntity.ok("User registered successfully!");
     }
 

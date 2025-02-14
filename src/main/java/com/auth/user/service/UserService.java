@@ -2,16 +2,17 @@ package com.auth.user.service;
 
 import com.auth.user.entity.Otp;
 import com.auth.user.entity.User;
-import com.auth.user.exception.ErrorResponse;
 import com.auth.user.repository.OtpRepository;
 import com.auth.user.repository.UserRepository;
 import com.auth.user.security.JwtAuthenticationResponse;
 import com.auth.user.security.JwtUtils;
+import com.auth.user.service.model.GenericResponse;
 import com.auth.user.service.model.OtpRequest;
 import com.auth.user.service.model.SbResponse;
 import com.auth.user.service.model.UserDetailsImpl;
 import com.auth.user.service.model.LoginRequest;
 import com.auth.user.service.model.RegisterRequest;
+import com.auth.user.service.model.UserResponse;
 import lombok.AllArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -23,11 +24,13 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+import static com.auth.user.exception.ErrorCode.INVALID_OTP;
+import static com.auth.user.exception.ErrorCode.PHONE_NUMBER_IN_USE;
+import static com.auth.user.utils.UserUtils.getSanitizedPhoneNumber;
+
 @AllArgsConstructor
 @Service
 public class UserService {
-    private static final String REGEX_SANITIZE_PH_CODE = "^\\+?63";
-    private static final String PH_NUM_PREFIX = "0";
     public static final String DEFAULT_ROLE_USER = "ROLE_USER";
     private PasswordEncoder passwordEncoder;
     private UserRepository userRepository;
@@ -35,12 +38,15 @@ public class UserService {
     private JwtUtils jwtUtils;
     private OtpRepository otpRepository;
 
-    public User registerUser(RegisterRequest registerRequest) {
+    public GenericResponse<UserResponse> registerUser(RegisterRequest registerRequest) {
         String sanitizedPhoneNumber = getSanitizedPhoneNumber(registerRequest.getPhoneNumber());
-        userRepository.findByPhoneNumberAndActiveTrue(sanitizedPhoneNumber)
-                .ifPresent(user -> {
-                    throw new IllegalArgumentException("Phone number already in use!");
-                });
+        Optional<User> existingUser = userRepository.findByPhoneNumberAndActiveTrue(sanitizedPhoneNumber);
+
+        if (existingUser.isPresent()) {
+            return GenericResponse.<UserResponse>builder()
+                    .error(PHONE_NUMBER_IN_USE.toErrorResponse(sanitizedPhoneNumber))
+                    .build();
+        }
         User user = new User();
         user.setPhoneNumber(sanitizedPhoneNumber);
         user.setEmail(registerRequest.getEmail());
@@ -50,7 +56,9 @@ public class UserService {
             user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
         }
 
-        return userRepository.save(user);
+        return GenericResponse.<UserResponse>builder()
+                .data(UserResponse.build(userRepository.save(user)))
+                .build();
     }
 
     public JwtAuthenticationResponse authenticateUser(LoginRequest loginRequest) {
@@ -69,7 +77,7 @@ public class UserService {
         // invalid if the otp is expired
         // invalid if the otp is not found
         if (otp.isEmpty()) {
-            return ErrorResponse.builder().error("Invalid OTP! not found or expired").build();
+            return INVALID_OTP.toErrorResponse(sanitizedPhoneNumber);
         }
 
         Otp otpEntity = otp.get();
@@ -84,10 +92,11 @@ public class UserService {
     }
 
     // this will be used for OTP login since the user will not go through registration process
-    public User findByPhoneNumberOrRegisterUser(String phoneNumber) {
+    public GenericResponse<UserResponse> findByPhoneNumberOrRegisterUser(String phoneNumber) {
         // sanitize phone number to remove country code
         String sanitizedPhoneNumber = getSanitizedPhoneNumber(phoneNumber);
         return userRepository.findByPhoneNumberAndActiveTrue(sanitizedPhoneNumber)
+                .map(user -> GenericResponse.<UserResponse>builder().data(UserResponse.build(user)).build())
                 .orElseGet(() -> {
                     RegisterRequest registerRequest = RegisterRequest.builder()
                             .phoneNumber(sanitizedPhoneNumber)
@@ -120,9 +129,5 @@ public class UserService {
             user.setPhoneNumberVerified(true);
             userRepository.save(user);
         }
-    }
-
-    public static String getSanitizedPhoneNumber(String phoneNumber) {
-        return phoneNumber.replaceFirst(REGEX_SANITIZE_PH_CODE, PH_NUM_PREFIX);
     }
 }

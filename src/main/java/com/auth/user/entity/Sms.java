@@ -14,28 +14,22 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 
-import java.time.LocalDateTime;
-
+@EqualsAndHashCode(callSuper = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
 @Data
-@EqualsAndHashCode(callSuper = true)
-@Table(name = "otp")
-public class Otp extends BaseEntity {
+@Table(name = "sms")
+public class Sms extends BaseEntity {
     @Column(nullable = false)
-    private String otp;
+    private String phoneNumber;
+
+    @Column(nullable = false)
+    private String message;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @Fetch(FetchMode.JOIN)
     @JoinColumn(name = "user_id", referencedColumnName = "id", updatable = false, nullable = false)
     private User user;
-
-    @Builder.Default
-    @Column(nullable = false)
-    private Boolean verified = false;
-    @Builder.Default
-    @Column(nullable = false)
-    private LocalDateTime expiryTime = LocalDateTime.now().plusMinutes(2);
 }

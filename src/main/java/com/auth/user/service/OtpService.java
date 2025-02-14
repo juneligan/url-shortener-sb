@@ -3,8 +3,10 @@ package com.auth.user.service;
 import com.auth.user.entity.Otp;
 import com.auth.user.entity.User;
 import com.auth.user.repository.OtpRepository;
+import com.auth.user.service.model.GenericResponse;
 import com.auth.user.service.model.LoginRequest;
 import com.auth.user.service.model.OtpNotifMessage;
+import com.auth.user.service.model.UserResponse;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -34,7 +36,15 @@ public class OtpService {
      **/
     public String sendOtp(LoginRequest loginRequest) {
         log.info("Received request to send OTP for user: {}", loginRequest.getPhoneNumber());
-        User user = userService.findByPhoneNumberOrRegisterUser(loginRequest.getPhoneNumber());
+        GenericResponse<UserResponse> response = userService.findByPhoneNumberOrRegisterUser(
+                loginRequest.getPhoneNumber()
+        );
+
+        if (response.hasError()) {
+            return response.getError().getError();
+        }
+
+        User user = response.getData().getUser();
 
         // find active otp given user id, return string for the response
         return otpRepository.findTop1ByUserAndUserActiveTrueAndExpiryTimeIsAfter(user, LocalDateTime.now())

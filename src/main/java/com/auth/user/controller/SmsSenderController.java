@@ -2,6 +2,7 @@ package com.auth.user.controller;
 
 import com.auth.user.entity.User;
 import com.auth.user.service.SmsSenderService;
+import com.auth.user.service.model.GenericResponse;
 import com.auth.user.service.model.SmsRequest;
 import com.auth.user.service.model.UserDetailsImpl;
 import com.url.shortener.service.model.UrlMappingRequest;
@@ -30,10 +31,15 @@ public class SmsSenderController {
     private final SmsSenderService smsSenderService;
     @PostMapping("/send")
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<String> sendSms(@Valid @RequestBody SmsRequest smsRequest, @NonNull Principal principal) {
+    public ResponseEntity<GenericResponse<?>> sendSms(@Valid @RequestBody SmsRequest smsRequest, @NonNull Principal principal) {
         String phoneNumber = getPhoneNumberFromPrincipal(((UsernamePasswordAuthenticationToken) principal)
                 .getPrincipal());
 
-        return ResponseEntity.ok(smsSenderService.sendMessage(smsRequest, phoneNumber));
+        GenericResponse<?> genericResponse = smsSenderService.sendMessage(smsRequest, phoneNumber);
+        if (genericResponse.hasError()) {
+            return genericResponse.toResponseEntity();
+        }
+
+        return ResponseEntity.ok(genericResponse);
     }
 }
