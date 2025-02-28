@@ -8,14 +8,18 @@ import org.springframework.http.HttpStatus;
 @Getter
 @AllArgsConstructor
 public enum ErrorCode {
-
     // error codes, status codes and messages
     USER_NOT_FOUND("USER_NOT_FOUND", HttpStatus.NOT_FOUND.value(), "User not found"),
     USER_ALREADY_EXISTS("USER_ALREADY_EXISTS", HttpStatus.BAD_REQUEST.value(), "User already exists"),
     INVALID_OTP("INVALID_OTP", HttpStatus.BAD_REQUEST.value(), "Invalid OTP! not found or Expired"),
+    OTP_ATTEMPTS_EXCEEDED(
+            "OTP_ATTEMPTS_EXCEEDED",
+            HttpStatus.BAD_REQUEST.value(),
+            "OTP attempts exceeded!, please wait for {} minutes"
+    ),
     OTP_EXPIRED("OTP_EXPIRED", HttpStatus.BAD_REQUEST.value(), "OTP expired"),
     OTP_ALREADY_SENT("OTP_ALREADY_SENT", HttpStatus.BAD_REQUEST.value(),
-            "OTP already sent! wait for 2 minute to generate new OTP"),
+            "OTP already sent! wait for {} minute to generate new OTP"),
     INVALID_PHONE_NUMBER("INVALID_PHONE_NUMBER", HttpStatus.BAD_REQUEST.value(), "Invalid phone number"),
     INVALID_PASSWORD("INVALID_PASSWORD", HttpStatus.BAD_REQUEST.value(), "Invalid password"),
     INVALID_USERNAME("INVALID_USERNAME", HttpStatus.BAD_REQUEST.value(), "Invalid username"),
@@ -25,18 +29,23 @@ public enum ErrorCode {
     PHONE_NUMBER_IN_USE("PHONE_NUMBER_IN_USE", HttpStatus.BAD_REQUEST.value(), "Phone number already in use"),
     SMS_LIMIT_REACHED("SMS_LIMIT_REACHED", HttpStatus.TOO_MANY_REQUESTS.value(),
             "You have reached the maximum number of messages for this hour. Please try again later."),
+
+    // 5xx errors
+    INTERNAL_SERVER_ERROR("INTERNAL_SERVER_ERROR", HttpStatus.INTERNAL_SERVER_ERROR.value(), "Internal server error"),
+    OTP_ATTEMPT_CONFIG_ERROR("OTP_ATTEMPT_CONFIG_ERROR", HttpStatus.INTERNAL_SERVER_ERROR.value(),
+            "OTP attempt configuration error"),
     ;
 
     private final String code;
     private final int status;
     private final String message;
 
-    public ErrorResponse toErrorResponse(String username) {
-        return ErrorResponse.build(this, username);
+    public ErrorResponse toErrorResponse(String username, Object... args) {
+        return ErrorResponse.build(this, username, args);
     }
 
-    public GenericResponse<?> toGenericResponse(String username) {
-        return GenericResponse.builder().error(toErrorResponse(username)).build();
+    public GenericResponse<?> toGenericResponse(String username, Object... args) {
+        return GenericResponse.builder().error(toErrorResponse(username, args)).build();
     }
 
     public String formatMessage(Object... args) {

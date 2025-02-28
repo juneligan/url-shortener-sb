@@ -1,8 +1,10 @@
 package com.auth.user.service.model;
 
 import com.auth.user.validation.ValidPhoneNumber;
+import lombok.Builder;
 import lombok.Data;
 
+@Builder
 @Data
 public class OtpRequest {
     @ValidPhoneNumber(

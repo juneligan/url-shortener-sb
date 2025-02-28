@@ -13,7 +13,6 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-
 import static com.url.shortener.config.WebSocketBrokerConfig.TOPIC_OTP;
 
 @Slf4j
@@ -26,6 +25,7 @@ public class OtpService {
     private final OtpRepository otpRepository;
     private final SimpMessagingTemplate simpMessagingTemplate;
     private final UserService userService;
+    private final DbConfigService dbConfigService;
 
     /**
      * Finds the user by phone number or registers a new user if not found.
@@ -65,6 +65,12 @@ public class OtpService {
 
                     return "OTP sent successfully!";
                 });
+    }
+
+
+    public void verifyOtpThenSave(Otp otp) {
+        otp.setVerified(true);
+        otpRepository.save(otp);
     }
 
     public Otp findOtpByPhoneNumber(User user) {

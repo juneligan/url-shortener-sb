@@ -50,8 +50,8 @@ public class AuthController {
     // this will authenticate user with OTP
     @PostMapping("/public/otp/authenticate")
     public ResponseEntity<?> authenticateOtp(@RequestBody OtpRequest otpRequest) {
-        SbResponse result = userService.authenticateUser(otpRequest);
-        if (result instanceof ErrorResponse) {
+        GenericResponse<?> result = userService.authenticateUser(otpRequest);
+        if (result.hasError()) {
             return ResponseEntity.badRequest().body(result);
         }
         return ResponseEntity.ok(result);

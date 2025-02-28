@@ -34,7 +34,7 @@ public class ErrorResponse implements SbResponse {
         return ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(errorCode.getStatus())
-                .errorCode(errorCode.getCode())
+                .errorCode(errorCode.name())
                 .error(errorCode.formatMessage(args))
                 .username(username)
                 .build();

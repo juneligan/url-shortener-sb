@@ -1,9 +1,11 @@
 package com.auth.user.service.model;
 
+import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
 import com.auth.user.validation.ValidPhoneNumber;
 
+@Builder
 @Data
 public class LoginRequest {
     @NonNull
