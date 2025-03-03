@@ -18,8 +18,12 @@ import lombok.Setter;
 @Table(name = "db_config")
 public class DbConfig extends BaseEntity {
     @Column(nullable = false, unique = true)
-    private String name;
+    private String name; // readable name
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String value;
+
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private DbConfigType type;
 }

@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
+import java.text.MessageFormat;
+
 @Getter
 @AllArgsConstructor
 public enum ErrorCode {
@@ -15,7 +17,12 @@ public enum ErrorCode {
     OTP_ATTEMPTS_EXCEEDED(
             "OTP_ATTEMPTS_EXCEEDED",
             HttpStatus.BAD_REQUEST.value(),
-            "OTP attempts exceeded!, please wait for {} minutes"
+            "OTP attempts exceeded!, please wait for {0} minutes"
+    ),
+    PASSWORD_ATTEMPTS_EXCEEDED(
+            "PASSWORD_ATTEMPTS_EXCEEDED",
+            HttpStatus.BAD_REQUEST.value(),
+            "Password attempts exceeded!, please wait for {0} minutes"
     ),
     OTP_EXPIRED("OTP_EXPIRED", HttpStatus.BAD_REQUEST.value(), "OTP expired"),
     OTP_ALREADY_SENT("OTP_ALREADY_SENT", HttpStatus.BAD_REQUEST.value(),
@@ -34,6 +41,8 @@ public enum ErrorCode {
     INTERNAL_SERVER_ERROR("INTERNAL_SERVER_ERROR", HttpStatus.INTERNAL_SERVER_ERROR.value(), "Internal server error"),
     OTP_ATTEMPT_CONFIG_ERROR("OTP_ATTEMPT_CONFIG_ERROR", HttpStatus.INTERNAL_SERVER_ERROR.value(),
             "OTP attempt configuration error"),
+
+    FORBIDDEN("FORBIDDEN", HttpStatus.FORBIDDEN.value(), "Forbidden"),
     ;
 
     private final String code;
@@ -44,12 +53,12 @@ public enum ErrorCode {
         return ErrorResponse.build(this, username, args);
     }
 
-    public GenericResponse<?> toGenericResponse(String username, Object... args) {
-        return GenericResponse.builder().error(toErrorResponse(username, args)).build();
+    public <E> GenericResponse<E> toGenericResponse(String username, Object... args) {
+        return GenericResponse.<E>builder().error(toErrorResponse(username, args)).build();
     }
 
     public String formatMessage(Object... args) {
-        return String.format(message, args);
+        return MessageFormat.format(message, args);
     }
 
 }

@@ -13,6 +13,8 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+
+import static com.auth.user.exception.ErrorCode.OTP_ALREADY_SENT;
 import static com.url.shortener.config.WebSocketBrokerConfig.TOPIC_OTP;
 
 @Slf4j
@@ -48,7 +50,7 @@ public class OtpService {
 
         // find active otp given user id, return string for the response
         return otpRepository.findTop1ByUserAndUserActiveTrueAndExpiryTimeIsAfter(user, LocalDateTime.now())
-                .map(otp -> "Otp already sent! wait for 2 minute to generate new OTP")
+                .map(otp -> OTP_ALREADY_SENT.toErrorResponse(user.getPhoneNumber()).getError())
                 .orElseGet(() -> {
                     log.info("Generating OTP for user: {}", user.getPhoneNumber());
                     String otp = String.valueOf((int) (Math.random() * OTP_RANGE + OTP_BASE));

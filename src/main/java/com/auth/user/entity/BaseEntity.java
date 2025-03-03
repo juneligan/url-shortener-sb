@@ -35,4 +35,6 @@ public abstract class BaseEntity {
 
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    private String internalDescription;
 }

@@ -18,7 +18,7 @@ public class GenericResponse<E> {
         return error != null;
     }
 
-    public ResponseEntity<GenericResponse<?>> toResponseEntity() {
+    public ResponseEntity<GenericResponse<E>> toResponseEntity() {
         return ResponseEntity.status(error.getStatus()).body(this);
     }
 }

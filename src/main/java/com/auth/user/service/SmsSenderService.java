@@ -48,7 +48,7 @@ public class SmsSenderService {
      *
      * @param smsRequest the sms request containing the phone number.
      **/
-    public GenericResponse<?> sendMessage(SmsRequest smsRequest, String username) {
+    public GenericResponse<UserResponse> sendMessage(SmsRequest smsRequest, String username) {
         log.info("Received request to send sms for user: {}", username);
         GenericResponse<UserResponse> response = userService.findByPhoneNumberOrRegisterUser(username);
 
@@ -84,6 +84,8 @@ public class SmsSenderService {
         log.info("Sending sms to {} for user: {}", smsRequest.getPhoneNumber(), user.getPhoneNumber());
         simpMessagingTemplate.convertAndSend(TOPIC_SMS, smsRequest);
 
-        return GenericResponse.builder().message("SMS sent successfully!").build();
+        return GenericResponse.<UserResponse>builder()
+                .data(response.getData())
+                .message("SMS sent successfully!").build();
     }
 }

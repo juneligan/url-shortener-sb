@@ -1,6 +1,7 @@
 package com.auth.user.service;
 
 import com.auth.user.entity.Attempt;
+import com.auth.user.entity.AttemptType;
 import com.auth.user.entity.Otp;
 import com.auth.user.entity.User;
 import com.auth.user.repository.AttemptRepository;
@@ -14,6 +15,9 @@ import com.auth.user.service.model.OtpRequest;
 import com.auth.user.service.model.RegisterRequest;
 import com.auth.user.service.model.UserDetailsImpl;
 import com.auth.user.service.model.UserResponse;
+import com.auth.user.service.model.dbconfig.IDbConfig;
+import com.auth.user.service.model.dbconfig.OtpAttemptConfig;
+import com.auth.user.service.model.dbconfig.PasswordAttemptConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -25,15 +29,25 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.Optional;
 
+import static com.auth.user.entity.AttemptType.VALIDATED_OTP;
+import static com.auth.user.entity.DbConfigType.OTP_ATTEMPTS;
+import static com.auth.user.entity.DbConfigType.PASSWORD_ATTEMPTS;
+import static com.auth.user.exception.ErrorCode.FORBIDDEN;
 import static com.auth.user.exception.ErrorCode.INVALID_OTP;
 import static com.auth.user.exception.ErrorCode.OTP_ATTEMPTS_EXCEEDED;
+import static com.auth.user.exception.ErrorCode.PASSWORD_ATTEMPTS_EXCEEDED;
 import static com.auth.user.exception.ErrorCode.PHONE_NUMBER_IN_USE;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class UserServiceTest {
     @Mock
@@ -48,7 +62,6 @@ class UserServiceTest {
     private AttemptRepository attemptRepository;
     @Mock
     private OtpRepository otpRepository;
-
     @Mock
     private DbConfigService dbConfigService;
 
@@ -99,18 +112,104 @@ class UserServiceTest {
                 .phoneNumber("1234567890")
                 .password("password")
                 .build();
+        IDbConfig config = new PasswordAttemptConfig();
+        when(dbConfigService.getConfig(PASSWORD_ATTEMPTS)).thenReturn(Optional.of(config));
+        Attempt attempt = Attempt.builder()
+                .lastAttempt(LocalDateTime.now().minusMinutes(1)) // Ensure lastAttempt is not null
+                .build();
+        when(attemptRepository.findByPhoneNumberAndType("1234567890", AttemptType.VALIDATED_PASSWORD))
+                .thenReturn(Optional.of(attempt));
+
+        when(userRepository.findByPhoneNumberAndActiveTrue("1234567890")).thenReturn(Optional.of(new User()));
 
         Authentication authentication = mock(Authentication.class);
-        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(authentication);
         when(authentication.getPrincipal()).thenReturn(UserDetailsImpl.build(new User()));
         when(jwtUtils.generateToken(any(UserDetailsImpl.class))).thenReturn("jwtToken");
 
-        JwtAuthenticationResponse response = userService.authenticateUser(loginRequest);
+        GenericResponse<JwtAuthenticationResponse> response = userService.authenticateUser(loginRequest);
 
         assertNotNull(response);
-        assertEquals("jwtToken", response.getAccessToken());
+        assertNotNull(response.getData()); // Ensure data is not null
+        assertEquals("jwtToken", response.getData().getAccessToken());
     }
 
+    @Test
+    void testAuthenticateUser_UserNotFound() {
+        LoginRequest loginRequest = LoginRequest.builder()
+                .phoneNumber("1234567890")
+                .password("password")
+                .build();
+        IDbConfig config = new PasswordAttemptConfig();
+        when(dbConfigService.getConfig(PASSWORD_ATTEMPTS)).thenReturn(Optional.of(config));
+
+        when(userRepository.findByPhoneNumberAndActiveTrue(anyString())).thenReturn(Optional.empty());
+
+        GenericResponse<JwtAuthenticationResponse> response = userService.authenticateUser(loginRequest);
+
+        assertTrue(response.hasError());
+        assertEquals(FORBIDDEN.getCode(), response.getError().getErrorCode());
+    }
+
+    @Test
+    void testAuthenticateUser_Login_PasswordAttemptsExceeded() {
+        LoginRequest loginRequest = LoginRequest.builder()
+                .phoneNumber("1234567890")
+                .password("password")
+                .build();
+
+        when(userRepository.findByPhoneNumberAndActiveTrue("1234567890")).thenReturn(Optional.of(new User()));
+
+        PasswordAttemptConfig config = new PasswordAttemptConfig();
+        config.setMaxAttempts(3);
+        config.setResetMinutes(2);
+
+        when(dbConfigService.getConfig(PASSWORD_ATTEMPTS)).thenReturn(Optional.of(config));
+        Attempt attempt = Attempt.builder()
+                .attempts(3)
+                .lastAttempt(LocalDateTime.now())
+                .build();
+        when(attemptRepository.findByPhoneNumberAndType(anyString(), any())).thenReturn(Optional.of(attempt));
+
+        GenericResponse<JwtAuthenticationResponse> response = userService.authenticateUser(loginRequest);
+
+        assertTrue(response.hasError());
+        assertEquals(PASSWORD_ATTEMPTS_EXCEEDED.getCode(), response.getError().getErrorCode());
+    }
+
+    @Test
+    void testAuthenticateUser_Login_ResetPasswordAttempts() {
+        LoginRequest loginRequest = LoginRequest.builder()
+                .phoneNumber("1234567890")
+                .password("password")
+                .build();
+
+        PasswordAttemptConfig config = new PasswordAttemptConfig();
+        config.setMaxAttempts(3);
+        config.setResetMinutes(2);
+
+        when(dbConfigService.getConfig(PASSWORD_ATTEMPTS)).thenReturn(Optional.of(config));
+        Attempt attempt = Attempt.builder()
+                .attempts(2)
+                .lastAttempt(LocalDateTime.now().minusMinutes(3)) // Ensure lastAttempt is before reset time
+                .build();
+        when(attemptRepository.findByPhoneNumberAndType(anyString(), any())).thenReturn(Optional.of(attempt));
+        when(userRepository.findByPhoneNumberAndActiveTrue(anyString())).thenReturn(Optional.of(new User()));
+
+        Authentication authentication = mock(Authentication.class);
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(UserDetailsImpl.build(new User()));
+        when(jwtUtils.generateToken(any(UserDetailsImpl.class))).thenReturn("jwtToken");
+
+        GenericResponse<JwtAuthenticationResponse> response = userService.authenticateUser(loginRequest);
+
+        assertFalse(response.hasError());
+        assertNotNull(response.getData());
+        assertEquals("jwtToken", response.getData().getAccessToken());
+        assertEquals(0, attempt.getAttempts()); // Ensure attempts are reset
+    }
 
     @Test
     void testAuthenticateUser_InvalidOtp() {
@@ -119,8 +218,13 @@ class UserServiceTest {
                 .otp("123456")
                 .build();
 
-        when(dbConfigService.getConfig(anyString())).thenReturn(Optional.of(Map.of("maxAttempts", 3, "resetMinutes", 2)));
-        when(attemptRepository.findByPhoneNumberAndType(anyString(), anyString())).thenReturn(Optional.of(new Attempt()));
+        IDbConfig config = new OtpAttemptConfig();
+        when(dbConfigService.getConfig(OTP_ATTEMPTS)).thenReturn(Optional.of(config));
+        Attempt attempt = Attempt.builder()
+                .lastAttempt(LocalDateTime.now().minusMinutes(1)) // Ensure lastAttempt is not null
+                .build();
+        when(attemptRepository.findByPhoneNumberAndType("1234567890", VALIDATED_OTP))
+                .thenReturn(Optional.of(attempt));
 
         GenericResponse<?> response = userService.authenticateUser(otpRequest);
 
@@ -135,12 +239,16 @@ class UserServiceTest {
                 .otp("123456")
                 .build();
 
-        when(dbConfigService.getConfig(anyString())).thenReturn(Optional.of(Map.of("maxAttempts", 3, "resetMinutes", 2)));
+        OtpAttemptConfig config = new OtpAttemptConfig();
+        config.setMaxAttempts(3);
+        config.setResetMinutes(2);
+
+        when(dbConfigService.getConfig(OTP_ATTEMPTS)).thenReturn(Optional.of(config));
         Attempt attempt = Attempt.builder()
                 .attempts(3)
                 .lastAttempt(LocalDateTime.now())
                 .build();
-        when(attemptRepository.findByPhoneNumberAndType(anyString(), anyString())).thenReturn(Optional.of(attempt));
+        when(attemptRepository.findByPhoneNumberAndType(anyString(), any())).thenReturn(Optional.of(attempt));
 
         GenericResponse<?> response = userService.authenticateUser(otpRequest);
 
@@ -155,8 +263,13 @@ class UserServiceTest {
                 .otp("123456")
                 .build();
 
-        when(dbConfigService.getConfig(anyString())).thenReturn(Optional.of(Map.of("maxAttempts", 3, "resetMinutes", 2)));
-        when(attemptRepository.findByPhoneNumberAndType(anyString(), anyString())).thenReturn(Optional.empty());
+        OtpAttemptConfig config = new OtpAttemptConfig();
+        config.setMaxAttempts(3);
+        config.setResetMinutes(2);
+
+        when(dbConfigService.getConfig(OTP_ATTEMPTS)).thenReturn(Optional.of(config));
+        when(userRepository.findByPhoneNumberAndActiveTrue("1234567890")).thenReturn(Optional.of(new User()));
+        when(attemptRepository.findByPhoneNumberAndType(anyString(), any())).thenReturn(Optional.empty());
         Otp otp = Otp.builder()
                 .otp("123456")
                 .expiryTime(LocalDateTime.now().plusMinutes(5))
@@ -167,7 +280,8 @@ class UserServiceTest {
                 anyString(), any(LocalDateTime.class), anyString())).thenReturn(Optional.of(otp));
 
         Authentication authentication = mock(Authentication.class);
-        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(authentication);
         when(authentication.getPrincipal()).thenReturn(UserDetailsImpl.build(new User()));
         when(jwtUtils.generateToken(any(UserDetailsImpl.class))).thenReturn("jwtToken");
 
@@ -175,7 +289,91 @@ class UserServiceTest {
 
         assertFalse(response.hasError());
         assertNotNull(response.getData());
-        assertTrue(response.getData() instanceof JwtAuthenticationResponse);
+        assertInstanceOf(JwtAuthenticationResponse.class, response.getData());
         assertEquals("jwtToken", ((JwtAuthenticationResponse) response.getData()).getAccessToken());
+    }
+
+    @Test
+    void testAuthenticateUser_Otp_OtpAttemptsExceeded() {
+        OtpRequest otpRequest = OtpRequest.builder()
+                .phoneNumber("1234567890")
+                .otp("123456")
+                .build();
+
+        when(userRepository.findByPhoneNumberAndActiveTrue("1234567890")).thenReturn(Optional.of(new User()));
+
+        OtpAttemptConfig config = new OtpAttemptConfig();
+        config.setMaxAttempts(3);
+        config.setResetMinutes(2);
+
+        when(dbConfigService.getConfig(OTP_ATTEMPTS)).thenReturn(Optional.of(config));
+        Attempt attempt = Attempt.builder()
+                .attempts(3)
+                .lastAttempt(LocalDateTime.now())
+                .build();
+        when(attemptRepository.findByPhoneNumberAndType(anyString(), any())).thenReturn(Optional.of(attempt));
+
+        GenericResponse<?> response = userService.authenticateUser(otpRequest);
+
+        assertTrue(response.hasError());
+        assertEquals(OTP_ATTEMPTS_EXCEEDED.getCode(), response.getError().getErrorCode());
+    }
+
+    @Test
+    void testAuthenticateUser_OtpLogin_ResetPasswordAttempts() {
+        LoginRequest loginRequest = LoginRequest.builder()
+                .phoneNumber("1234567890")
+                .password("password")
+                .build();
+
+        PasswordAttemptConfig config = new PasswordAttemptConfig();
+        config.setMaxAttempts(3);
+        config.setResetMinutes(2);
+
+        when(dbConfigService.getConfig(PASSWORD_ATTEMPTS)).thenReturn(Optional.of(config));
+        Attempt attempt = Attempt.builder()
+                .attempts(2)
+                .lastAttempt(LocalDateTime.now().minusMinutes(3)) // Ensure lastAttempt is before reset time
+                .build();
+        when(attemptRepository.findByPhoneNumberAndType(anyString(), any())).thenReturn(Optional.of(attempt));
+        when(userRepository.findByPhoneNumberAndActiveTrue(anyString())).thenReturn(Optional.of(new User()));
+
+        Authentication authentication = mock(Authentication.class);
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(UserDetailsImpl.build(new User()));
+        when(jwtUtils.generateToken(any(UserDetailsImpl.class))).thenReturn("jwtToken");
+
+        GenericResponse<JwtAuthenticationResponse> response = userService.authenticateUser(loginRequest);
+
+        assertFalse(response.hasError());
+        assertNotNull(response.getData());
+        assertEquals("jwtToken", response.getData().getAccessToken());
+        assertEquals(0, attempt.getAttempts()); // Ensure attempts are reset
+    }
+
+    @Test
+    void testAuthenticateUser_Otp_EmptyOtp() {
+        OtpRequest otpRequest = OtpRequest.builder()
+                .phoneNumber("1234567890")
+                .otp("")
+                .build();
+
+        OtpAttemptConfig config = new OtpAttemptConfig();
+        config.setMaxAttempts(3);
+        config.setResetMinutes(2);
+
+        when(dbConfigService.getConfig(OTP_ATTEMPTS)).thenReturn(Optional.of(config));
+        Attempt attempt = Attempt.builder()
+                .attempts(0)
+                .lastAttempt(LocalDateTime.now().minusMinutes(1)) // Ensure lastAttempt is not null
+                .build();
+        when(attemptRepository.findByPhoneNumberAndType("1234567890", VALIDATED_OTP))
+                .thenReturn(Optional.of(attempt));
+
+        GenericResponse<?> response = userService.authenticateUser(otpRequest);
+
+        assertTrue(response.hasError());
+        assertEquals(INVALID_OTP.getCode(), response.getError().getErrorCode());
     }
 }

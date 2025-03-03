@@ -8,5 +8,4 @@ import java.util.Optional;
 
 public interface AttemptRepository extends JpaRepository<Attempt, Long> {
     Optional<Attempt> findByPhoneNumberAndType(String phoneNumber, AttemptType type);
-
 }
