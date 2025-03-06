@@ -26,7 +26,7 @@ public enum ErrorCode {
     ),
     OTP_EXPIRED("OTP_EXPIRED", HttpStatus.BAD_REQUEST.value(), "OTP expired"),
     OTP_ALREADY_SENT("OTP_ALREADY_SENT", HttpStatus.BAD_REQUEST.value(),
-            "OTP already sent! wait for {} minute to generate new OTP"),
+            "OTP already sent! wait for {0} minute to generate new OTP"),
     INVALID_PHONE_NUMBER("INVALID_PHONE_NUMBER", HttpStatus.BAD_REQUEST.value(), "Invalid phone number"),
     INVALID_PASSWORD("INVALID_PASSWORD", HttpStatus.BAD_REQUEST.value(), "Invalid password"),
     INVALID_USERNAME("INVALID_USERNAME", HttpStatus.BAD_REQUEST.value(), "Invalid username"),
