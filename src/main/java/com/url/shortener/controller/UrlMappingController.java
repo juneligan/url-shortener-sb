@@ -87,8 +87,8 @@ public class UrlMappingController {
                 .getPrincipal());
         User user = userService.findByPhoneNumber(phoneNumber);
 
-        LocalDate startDateTime = startDate != null ? LocalDate.parse(startDate, formatter) : null;
-        LocalDate endDateTime = endDate != null ? LocalDate.parse(endDate, formatter) : null;
+        LocalDate startDateTime = startDate != null ? LocalDate.parse(startDate, formatter) : LocalDate.now().minusDays(7);
+        LocalDate endDateTime = endDate != null ? LocalDate.parse(endDate, formatter) : startDateTime.plusDays(7);
 
         Map<LocalDate, Long> totalClicks = urlMappingService.getTotalClicksByUserAndDate(
                 user, startDateTime, endDateTime

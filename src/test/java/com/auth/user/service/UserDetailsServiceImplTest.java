@@ -83,7 +83,7 @@ public class UserDetailsServiceImplTest {
 
         // when
         when(userRepository.findByPhoneNumberAndActiveTrue("09123456789")).thenReturn(Optional.of(user));
-        when(otpRepository.findTop1ByUserAndUserActiveTrueAndExpiryTimeIsAfter(eq(user), any(LocalDateTime.class)))
+        when(otpRepository.findTop1ByUserAndUserActiveTrueAndVerifiedTrueAndActiveTrueAndDeletedFalse(user))
                 .thenReturn(Optional.of(otp));
         when(passwordEncoder.encode("123456")).thenReturn("encodedOtp");
 
@@ -103,7 +103,7 @@ public class UserDetailsServiceImplTest {
 
         // when
         when(userRepository.findByPhoneNumberAndActiveTrue("09123456789")).thenReturn(Optional.of(user));
-        when(otpRepository.findTop1ByUserAndUserActiveTrueAndExpiryTimeIsAfter(user, LocalDateTime.now()))
+        when(otpRepository.findTop1ByUserAndUserActiveTrueAndVerifiedTrueAndActiveTrueAndDeletedFalse(user))
                 .thenReturn(Optional.empty());
 
         // then
