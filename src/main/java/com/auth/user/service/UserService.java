@@ -158,13 +158,12 @@ public class UserService {
         }
 
         Otp otpEntity = otp.get();
+        verifyOtpThenCommit(otpEntity);
+
         updatePhoneNumberVerification(otpEntity);
         JwtAuthenticationResponse jwtAuthenticationResponse = getJwtAuthenticationResponse(
                 otpRequest.getPhoneNumber(), otpEntity.getOtp()
         );
-
-        otpEntity.setVerified(true);
-        otpRepository.save(otpEntity);
 
         // Reset the attempt count after successful OTP validation
         attempt.setAttempts(0);
@@ -244,5 +243,11 @@ public class UserService {
                         .lastAttempt(LocalDateTime.now())
                         .build()
                 );
+    }
+
+    private void verifyOtpThenCommit(Otp otpEntity) {
+        otpEntity.setVerified(true);
+        otpRepository.save(otpEntity);
+        otpRepository.flush(); // commit the transaction
     }
 }

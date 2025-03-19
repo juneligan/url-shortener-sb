@@ -8,11 +8,14 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 public interface OtpRepository extends JpaRepository<Otp, Long> {
+    // for logging in and before authenticating creds
     Optional<Otp> findTop1ByOtpAndExpiryTimeAfterAndVerifiedIsFalseAndUserPhoneNumberAndUserPasswordIsNullAndUserActiveIsTrue(
             String otp, LocalDateTime expiryTimeAfter, String userPhoneNumber
     );
 
+    // before sending otp
     Optional<Otp> findTop1ByUserAndUserActiveTrueAndExpiryTimeIsAfter(User user, LocalDateTime expiryTimeBefore);
 
-    Optional<Otp> findTop1ByUserAndUserActiveTrueAndVerifiedTrueAndActiveTrueAndDeletedFalse(User user);
+    // for authentication
+    Optional<Otp> findTop1ByUserAndUserActiveTrueAndVerifiedTrueAndActiveTrueAndDeletedFalseOrderByIdDesc(User user);
 }
