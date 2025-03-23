@@ -36,6 +36,7 @@ dependencies {
 	// currently used as android app notifier to send OTP using the real phone and its sms load
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.apache.commons:commons-lang3:3.0' // helper
 //	runtimeOnly 'org.postgresql:postgresql' // can't use postgres due to termux limitation
 	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client' // using mariadb instead of postgres
 	annotationProcessor 'org.projectlombok:lombok'
