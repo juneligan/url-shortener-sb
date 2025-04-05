@@ -20,11 +20,8 @@ import com.auth.user.service.model.UserResponse;
 import com.auth.user.service.model.dbconfig.IAttemptConfig;
 import com.auth.user.service.model.dbconfig.IDbConfig;
 import com.auth.user.service.model.dbconfig.OtpAttemptConfig;
-import com.auth.user.service.model.dbconfig.PasswordAttemptConfig;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -36,15 +33,13 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static com.auth.user.entity.AttemptType.VALIDATED_OTP;
-import static com.auth.user.entity.AttemptType.VALIDATED_PASSWORD;
 import static com.auth.user.entity.DbConfigType.OTP_ATTEMPTS;
-import static com.auth.user.entity.DbConfigType.PASSWORD_ATTEMPTS;
 import static com.auth.user.exception.ErrorCode.FORBIDDEN;
 import static com.auth.user.exception.ErrorCode.INTERNAL_SERVER_ERROR;
 import static com.auth.user.exception.ErrorCode.INVALID_OTP;
 import static com.auth.user.exception.ErrorCode.OTP_ATTEMPTS_EXCEEDED;
-import static com.auth.user.exception.ErrorCode.PASSWORD_ATTEMPTS_EXCEEDED;
 import static com.auth.user.exception.ErrorCode.PHONE_NUMBER_IN_USE;
+import static com.auth.user.exception.ErrorCode.USER_ALREADY_EXISTS;
 import static com.auth.user.utils.UserUtils.getSanitizedPhoneNumber;
 
 @Slf4j
@@ -61,16 +56,28 @@ public class UserService {
     private final DbConfigService dbConfigService;
 
     public GenericResponse<UserResponse> registerUser(RegisterRequest registerRequest) {
-        String sanitizedPhoneNumber = getSanitizedPhoneNumber(registerRequest.getPhoneNumber());
-        Optional<User> existingUser = userRepository.findByPhoneNumberAndActiveTrue(sanitizedPhoneNumber);
-
-        if (existingUser.isPresent()) {
-            return GenericResponse.<UserResponse>builder()
-                    .error(PHONE_NUMBER_IN_USE.toErrorResponse(sanitizedPhoneNumber))
-                    .build();
-        }
         User user = new User();
-        user.setPhoneNumber(sanitizedPhoneNumber);
+        if (registerRequest.getPhoneNumber() != null) {
+            String sanitizedPhoneNumber = getSanitizedPhoneNumber(registerRequest.getPhoneNumber());
+            Optional<User> existingUser = userRepository.findByPhoneNumberAndActiveTrue(sanitizedPhoneNumber);
+
+            if (existingUser.isPresent()) {
+                return GenericResponse.<UserResponse>builder()
+                        .error(PHONE_NUMBER_IN_USE.toErrorResponse(sanitizedPhoneNumber))
+                        .build();
+            }
+
+            user.setPhoneNumber(sanitizedPhoneNumber);
+        } else {
+            Optional<User> existingUser = userRepository.findTop1ByEmailAndActiveTrue(registerRequest.getEmail())
+                    .or(() -> userRepository.findTop1ByUsernameAndActiveTrue(registerRequest.getUsername()));
+            if (existingUser.isPresent()) {
+                return GenericResponse.<UserResponse>builder()
+                        .error(USER_ALREADY_EXISTS.toErrorResponse(registerRequest.getUsername()))
+                        .build();
+            }
+        }
+
         user.setEmail(registerRequest.getEmail());
         user.setUsername(registerRequest.getUsername());
         user.setRole(DEFAULT_ROLE_USER); // static for now
@@ -84,40 +91,55 @@ public class UserService {
     }
 
     public GenericResponse<JwtAuthenticationResponse> authenticateUser(LoginRequest loginRequest) {
-        String sanitizedPhoneNumber = getSanitizedPhoneNumber(loginRequest.getPhoneNumber());
-        GenericResponse<?> configResult = findConfig(sanitizedPhoneNumber, PASSWORD_ATTEMPTS);
-        if (configResult.hasError()) {
-            return GenericResponse.<JwtAuthenticationResponse>builder()
-                    .error(configResult.getError())
-                    .build();
-        }
-        Optional<User> existingUser = userRepository.findByPhoneNumberAndActiveTrue(sanitizedPhoneNumber);
-        if (existingUser.isEmpty()) {
-            log.warn("Login: User not found with phone number: {}", sanitizedPhoneNumber);
-            return GenericResponse.<JwtAuthenticationResponse>builder()
-                    .error(ErrorResponse.build(FORBIDDEN, sanitizedPhoneNumber))
-                    .build();
+        String username;
+//        GenericResponse<?> configResult;
+        if (loginRequest.getPhoneNumber() != null) {
+            username = getSanitizedPhoneNumber(loginRequest.getPhoneNumber());
+//            configResult = findConfig(username, PASSWORD_ATTEMPTS);
+//            if (configResult.hasError()) {
+//                return GenericResponse.<JwtAuthenticationResponse>builder()
+//                        .error(configResult.getError())
+//                        .build();
+//            }
+            Optional<User> existingUser = userRepository.findByPhoneNumberAndActiveTrue(username);
+            if (existingUser.isEmpty()) {
+                log.warn("Login: User not found with phone number: {}", username);
+                return GenericResponse.<JwtAuthenticationResponse>builder()
+                        .error(ErrorResponse.build(FORBIDDEN, username))
+                        .build();
+            }
+//            PasswordAttemptConfig config = (PasswordAttemptConfig) configResult.getData();
+//            Attempt attempt = getAttempt(username, VALIDATED_PASSWORD);
+//            if (isInvalidAttempt(attempt, config)) {
+//                return PASSWORD_ATTEMPTS_EXCEEDED.toGenericResponse(username, config.getResetMinutes());
+//            } else if (attempt.getLastAttempt().isBefore(LocalDateTime.now().minusMinutes(config.getResetMinutes()))) {
+//                attempt.setAttempts(0);
+//            }
+//            attempt.setAttempts(attempt.getAttempts() + 1);
+//            attempt.setLastAttempt(LocalDateTime.now());
+//            attemptRepository.save(attempt);
+        } else {
+
+            Optional<User> existingUser = userRepository.findTop1ByEmailAndActiveTrue(loginRequest.getEmail());
+            if (existingUser.isEmpty()) {
+                log.warn("Login: User not found with phone number: {}", loginRequest.getEmail());
+                return GenericResponse.<JwtAuthenticationResponse>builder()
+                        .error(ErrorResponse.build(FORBIDDEN, loginRequest.getEmail()))
+                        .build();
+            }
+
+            username = loginRequest.getEmail();
         }
 
-        PasswordAttemptConfig config = (PasswordAttemptConfig) configResult.getData();
-        Attempt attempt = getAttempt(sanitizedPhoneNumber, VALIDATED_PASSWORD);
-        if (isInvalidAttempt(attempt, config)) {
-            return PASSWORD_ATTEMPTS_EXCEEDED.toGenericResponse(sanitizedPhoneNumber, config.getResetMinutes());
-        } else if (attempt.getLastAttempt().isBefore(LocalDateTime.now().minusMinutes(config.getResetMinutes()))) {
-            attempt.setAttempts(0);
-        }
-        attempt.setAttempts(attempt.getAttempts() + 1);
-        attempt.setLastAttempt(LocalDateTime.now());
-        attemptRepository.save(attempt);
 
         GenericResponse<JwtAuthenticationResponse> response = GenericResponse.<JwtAuthenticationResponse>builder()
-                .data(getJwtAuthenticationResponse(sanitizedPhoneNumber, loginRequest.getPassword()))
+                .data(getJwtAuthenticationResponse(username, loginRequest.getPassword()))
                 .build();
-
-        // Reset the attempt count after successful password validation
-        attempt.setAttempts(0);
-        attempt.setLastAttempt(LocalDateTime.now());
-        attemptRepository.save(attempt);
+//
+//        // Reset the attempt count after successful password validation
+//        attempt.setAttempts(0);
+//        attempt.setLastAttempt(LocalDateTime.now());
+//        attemptRepository.save(attempt);
 
         return response;
     }
@@ -191,6 +213,11 @@ public class UserService {
         String sanitizedPhoneNumber = getSanitizedPhoneNumber(phoneNumber);
         return userRepository.findByPhoneNumberAndActiveTrue(sanitizedPhoneNumber)
                 .orElseThrow(() -> new IllegalArgumentException("User Not Found with phone number: " + phoneNumber));
+    }
+
+    public User findByEmail(String email) {
+        return userRepository.findTop1ByEmailAndActiveTrue(email)
+                .orElseThrow(() -> new IllegalArgumentException("User Not Found with phone number: " + email));
     }
 
     private JwtAuthenticationResponse getJwtAuthenticationResponse(String sanitizedPhoneNumber, String password) {

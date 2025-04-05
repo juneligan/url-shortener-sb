@@ -15,6 +15,9 @@ public class UserUtils {
     public static String getPhoneNumberFromPrincipal(Object principal) {
         return ((UserDetailsImpl) principal).getPhoneNumber();
     }
+    public static String getEmailFromPrincipal(Object principal) {
+        return ((UserDetailsImpl) principal).getEmail();
+    }
 
     public static String getSanitizedPhoneNumber(String phoneNumber) {
         return phoneNumber.replaceFirst(REGEX_SANITIZE_PH_CODE, PH_NUM_PREFIX);

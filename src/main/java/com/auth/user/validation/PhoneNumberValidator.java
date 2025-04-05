@@ -19,7 +19,7 @@ public class PhoneNumberValidator implements ConstraintValidator<ValidPhoneNumbe
     @Override
     public boolean isValid(String phoneNumber, ConstraintValidatorContext context) {
         if (phoneNumber == null) {
-            return false;
+            return true;
         }
         if (phoneNumber.startsWith("+63") && phoneNumber.length() == 13) {
             return true;

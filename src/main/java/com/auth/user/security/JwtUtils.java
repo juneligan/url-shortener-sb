@@ -16,6 +16,8 @@ import java.util.Date;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.auth.user.entity.User.EMAIL_KEY;
+
 @Component
 public class JwtUtils {
     public static final String INVALID_JWT_TOKEN_MSG = "Invalid JWT token";
@@ -50,6 +52,7 @@ public class JwtUtils {
         return Jwts.builder()
                 .subject(phoneNumber)
                 .claim("roles", roles)
+                .claim("email", userDetails.getEmail())
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + jwtExpirationMs))
                 .signWith(key())
@@ -64,6 +67,14 @@ public class JwtUtils {
                 .parseSignedClaims(token)
                 .getPayload()
                 .getSubject();
+    }
+
+    public String getEmailFromJwt(String token) {
+        return Jwts.parser()
+                .verifyWith((SecretKey) key())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload().get(EMAIL_KEY, String.class);
     }
 
     public boolean validateToken(String authToken) {

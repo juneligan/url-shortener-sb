@@ -1,11 +1,13 @@
 package com.auth.user.service.model;
 
 import com.auth.user.validation.ValidPhoneNumber;
+import com.auth.user.validation.ValidRegisterRequest;
 import lombok.Builder;
 import lombok.Data;
 
 import java.util.Set;
 
+@ValidRegisterRequest
 @Builder
 @Data
 public class RegisterRequest {

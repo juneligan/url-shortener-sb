@@ -2,7 +2,6 @@ package com.url.shortener.controller;
 
 import com.auth.user.entity.User;
 import com.auth.user.service.UserService;
-import com.auth.user.service.model.UserDetailsImpl;
 import com.url.shortener.service.UrlMappingService;
 import com.url.shortener.service.model.ClickEventResponse;
 import com.url.shortener.service.model.UrlMappingRequest;
@@ -27,6 +26,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
+import static com.auth.user.utils.UserUtils.getEmailFromPrincipal;
 import static com.auth.user.utils.UserUtils.getPhoneNumberFromPrincipal;
 
 @AllArgsConstructor
@@ -42,9 +42,7 @@ public class UrlMappingController {
             @RequestBody UrlMappingRequest urlMappingRequest, @NonNull Principal principal
     ) {
         String originalUrl = urlMappingRequest.getOriginalUrl();
-        String phoneNumber = getPhoneNumberFromPrincipal(((UsernamePasswordAuthenticationToken) principal)
-                .getPrincipal());
-        User user = userService.findByPhoneNumber(phoneNumber);
+        User user = getAuthenticatedUser((UsernamePasswordAuthenticationToken) principal);
         UrlMappingResponse urlMappingResponse = urlMappingService.createShortUrl(originalUrl, user);
 
         return ResponseEntity.ok(urlMappingResponse);
@@ -53,9 +51,7 @@ public class UrlMappingController {
     @GetMapping
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<?> getAllUrls(@NonNull Principal principal) {
-        String phoneNumber = getPhoneNumberFromPrincipal(((UsernamePasswordAuthenticationToken) principal)
-                .getPrincipal());
-        User user = userService.findByPhoneNumber(phoneNumber);
+        User user = getAuthenticatedUser((UsernamePasswordAuthenticationToken) principal);
         return ResponseEntity.ok(urlMappingService.getAllUrls(user));
     }
 
@@ -83,9 +79,7 @@ public class UrlMappingController {
             Principal principal
     ) {
         DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE;
-        String phoneNumber = getPhoneNumberFromPrincipal(((UsernamePasswordAuthenticationToken) principal)
-                .getPrincipal());
-        User user = userService.findByPhoneNumber(phoneNumber);
+        User user = getAuthenticatedUser((UsernamePasswordAuthenticationToken) principal);
 
         LocalDate startDateTime = startDate != null ? LocalDate.parse(startDate, formatter) : LocalDate.now().minusDays(7);
         LocalDate endDateTime = endDate != null ? LocalDate.parse(endDate, formatter) : startDateTime.plusDays(7);
@@ -94,5 +88,16 @@ public class UrlMappingController {
                 user, startDateTime, endDateTime
         );
         return ResponseEntity.ok(totalClicks);
+    }
+
+    private User getAuthenticatedUser(@NonNull UsernamePasswordAuthenticationToken principal) {
+        String phoneNumber = getPhoneNumberFromPrincipal(principal.getPrincipal());
+        if (phoneNumber == null || phoneNumber.isEmpty()) {
+            String email = getEmailFromPrincipal(principal.getPrincipal());
+            return userService.findByEmail(email);
+        } else {
+
+            return userService.findByPhoneNumber(phoneNumber);
+        }
     }
 }

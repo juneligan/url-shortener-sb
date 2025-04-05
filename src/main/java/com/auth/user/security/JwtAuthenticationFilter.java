@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Optional;
 
 @AllArgsConstructor
 @Component
@@ -30,7 +31,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String jwt = jwtTokenProvider.getJwtFromHeader(request);
             if (jwt != null && jwtTokenProvider.validateToken(jwt)) {
                 String phoneNumber = jwtTokenProvider.getPhoneNumberFromJwt(jwt);
-                UserDetails userDetails = userDetailsService.loadUserByUsername(phoneNumber);
+                String username = Optional.ofNullable(phoneNumber)
+                        .orElseGet(() -> jwtTokenProvider.getEmailFromJwt(jwt));
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                 if (userDetails != null) {
                     setSecurityContextHolder(request, userDetails);
                 }

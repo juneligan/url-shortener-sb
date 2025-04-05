@@ -13,7 +13,8 @@ import static com.auth.user.utils.UserUtils.DEFAULT_SMS_LIMIT_PER_HR;
 @Data
 @Table(name = "users")
 public class User extends BaseEntity {
-    @Column(name = "phone_number", unique=true, nullable = false)
+    public static final String EMAIL_KEY = "email";
+    @Column(name = "phone_number", unique=true, nullable = true)
     private String phoneNumber; // unique
     private String email;
     private String username;
